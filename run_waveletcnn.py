@@ -13,7 +13,6 @@ import numpy as np
 import caffe
 import functions
 
-
 parser = argparse.ArgumentParser(description='Clasify the input image into the correct category.')
 parser.add_argument('--phase', '-p', type=str, required=True,
                     help='Run Wavelet CNN on train/test mode (input train or test)')
@@ -38,7 +37,6 @@ else:
     caffe.set_device(args.gpu)
     caffe.set_mode_gpu()
 
-
 if args.phase == "train":
     functions.misc.rewrite_data('models/WaveletCNN_4level.prototxt', args.dataset)
     Netsolver = os.path.join(base_dir, 'models/solver_WaveletCNN_4level.prototxt')
@@ -48,15 +46,15 @@ elif args.phase == "test":
     net = caffe.Net('models/WaveletCNN_4level_deploy.prototxt', args.initmodel, caffe.TEST)
     # load input and configure preprocessing
     transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
-    transformer.set_transpose('data', (2,0,1))
-    transformer.set_channel_swap('data', (2,1,0))
+    transformer.set_transpose('data', (2, 0, 1))
+    transformer.set_channel_swap('data', (2, 1, 0))
     transformer.set_raw_scale('data', 255.0)
 
-    #load the image in the data layer
+    # load the image in the data layer
     image = caffe.io.load_image(args.target_image)
     min_length = min(image.shape[:2])
-    crop_length = int(min_length * 0.6)     # crop image with 60% length of shorter edge
-    cropped_imgs = functions.misc.random_crop(image, (crop_length, crop_length), 1)   # shape is N x H x W x C
+    crop_length = int(min_length * 0.6)  # crop image with 60% length of shorter edge
+    cropped_imgs = functions.misc.random_crop(image, (crop_length, crop_length), 1)  # shape is N x H x W x C
     cropped_im = cropped_imgs[0]
     resized_im = caffe.io.resize_image(cropped_im, (224, 224), interp_order=3)
 
@@ -65,7 +63,7 @@ elif args.phase == "test":
     # the output probability vector for the first image in the batch
     output_prob = out['prob'][0]
 
-    labels = 'data/imagenet_labels.txt'   # Path to the text file containing a label name per each line.
+    labels = 'data/imagenet_labels.txt'  # Path to the text file containing a label name per each line.
     label_list = np.loadtxt(labels, str, delimiter='\t')
 
     # top-5 for the probability
@@ -74,4 +72,4 @@ elif args.phase == "test":
     # print zip(label_list[top_idx], output_prob[top_idx])
 
     for i in range(len(top_idx)):
-        print(label_list[top_idx][i] + ': ' + str(round(output_prob[top_idx][i]*100, 3)))
+        print(label_list[top_idx][i] + ': ' + str(round(output_prob[top_idx][i] * 100, 3)))

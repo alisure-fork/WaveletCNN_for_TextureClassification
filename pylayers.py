@@ -4,6 +4,7 @@ import caffe
 import functions
 
 
+# 数据处理层
 class GCN(caffe.Layer):
     def setup(self, bottom, top):
         pass
@@ -14,7 +15,7 @@ class GCN(caffe.Layer):
     def forward(self, bottom, top):
         batch_size = len(bottom[0].data)
         for index in range(batch_size):
-            img = bottom[0].data[index].transpose(1,2,0)
+            img = bottom[0].data[index].transpose(1, 2, 0)
             img_vec = img.flatten('F')
             img_vec = img_vec.reshape(1, len(img_vec))
             img_gcn = functions.misc.global_contrast_normalize(img_vec)
@@ -50,13 +51,15 @@ class GramMatrix(caffe.Layer):
             activations = bottom[0].data[index]
             G, F = functions.misc.gram_matrix(activations[None, :, :, :])
             top_tmp = diff_tmp[index][0] + diff_tmp[index][0].T
-            bottom[0].diff[index] = np.dot(top_tmp, F).reshape(bottom[0].diff.shape[1], bottom[0].diff.shape[2], bottom[0].diff.shape[2])
+            bottom[0].diff[index] = np.dot(top_tmp, F).reshape(bottom[0].diff.shape[1], bottom[0].diff.shape[2],
+                                                               bottom[0].diff.shape[2])
 
 
 class WaveletHaarLevelLayer(caffe.Layer):
+
     def setup(self, bottom, top):
         try:
-            self.level = int(self.param_str)   # string style of number
+            self.level = int(self.param_str)  # string style of number
         except ValueError:
             raise ValueError("param_str must be string")
 
@@ -66,25 +69,32 @@ class WaveletHaarLevelLayer(caffe.Layer):
 
         bt_shape = bottom[0].data.shape
         for i in range(self.level):
-            div = 2**(i+1)
-            top[i].reshape(bt_shape[0], 4*bt_shape[1], int(bt_shape[2]/div), int(bt_shape[3]/div))
+            div = 2 ** (i + 1)
+            top[i].reshape(bt_shape[0], 4 * bt_shape[1], int(bt_shape[2] / div), int(bt_shape[3] / div))
+        pass
 
     def reshape(self, bottom, top):
         bt_shape = bottom[0].data.shape
         for i in range(self.level):
-            div = 2**(i+1)
-            top[i].reshape(bt_shape[0], 4*bt_shape[1], int(bt_shape[2]/div), int(bt_shape[3]/div))
+            div = 2 ** (i + 1)
+            top[i].reshape(bt_shape[0], 4 * bt_shape[1], int(bt_shape[2] / div), int(bt_shape[3] / div))
+        pass
 
     def forward(self, bottom, top):
         batch_size = len(bottom[0].data)
-        for index in range(batch_size):
-            for i in range(len(bottom[0].data[0])):
-                wavelets = functions.wavelet_haar.WaveletTransform(bottom[0].data[index][i], self.level)
+        for index in range(batch_size):  # batch num
+            for i in range(len(bottom[0].data[0])):  # channel
+                wavelets = functions.wavelet_haar.WaveletTransform(bottom[0].data[index][i], self.level)  # 通道单独处理
                 for j in range(self.level):
-                    top[j].data[index][4*i] = wavelets["LL_"+str(j+1)]
-                    top[j].data[index][4*i+1] = wavelets["LH_"+str(j+1)]
-                    top[j].data[index][4*i+2] = wavelets["HL_"+str(j+1)]
-                    top[j].data[index][4*i+3] = wavelets["HH_"+str(j+1)]
+                    top[j].data[index][4 * i] = wavelets["LL_" + str(j + 1)]
+                    top[j].data[index][4 * i + 1] = wavelets["LH_" + str(j + 1)]
+                    top[j].data[index][4 * i + 2] = wavelets["HL_" + str(j + 1)]
+                    top[j].data[index][4 * i + 3] = wavelets["HH_" + str(j + 1)]
+                pass
+            pass
+        pass
 
     def backward(self, top, propagate_down, bottom):
         pass
+
+    pass

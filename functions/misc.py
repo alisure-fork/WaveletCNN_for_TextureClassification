@@ -6,6 +6,7 @@ import caffe
 from caffe.proto import caffe_pb2
 import google.protobuf.text_format as txtf
 
+
 def rewrite_data(filename, database):
     '''
     Rewrite database names in the prototxt file
@@ -20,6 +21,7 @@ def rewrite_data(filename, database):
     idx = layerNames.index('data')
     data = net.layer[idx]
     data.data_param.source = database
+
 
 def random_crop(image, crop_dims, crop_num):
     """
@@ -49,8 +51,8 @@ def random_crop(image, crop_dims, crop_num):
 
     # Make crop coordinates
     crop_ix = np.concatenate([
-         im_toplefts,
-         im_toplefts + np.tile(crop_dims, (10, 1))
+        im_toplefts,
+        im_toplefts + np.tile(crop_dims, (10, 1))
     ], axis=1)
     crop_ix = crop_ix.astype(int)
 
@@ -59,6 +61,7 @@ def random_crop(image, crop_dims, crop_num):
         crops[ix] = image[crop_ix[ix, 0]:crop_ix[ix, 2], crop_ix[ix, 1]:crop_ix[ix, 3], :]
 
     return crops
+
 
 def center_crop(image, crop_dims):
     """
@@ -82,13 +85,14 @@ def center_crop(image, crop_dims):
     # coordinates of center cropping
     crop_ix = np.tile(im_center, (1, 2)) + np.concatenate([
         -crop_dims / 2.0,
-         crop_dims / 2.0
+        crop_dims / 2.0
     ])
     crop_ix = crop_ix.astype(int)
 
     crop = image[crop_ix[0, 0]:crop_ix[0, 2], crop_ix[0, 1]:crop_ix[0, 3], :]
 
     return crop
+
 
 def RotateImage(images):
     """
@@ -120,9 +124,10 @@ def RotateImage(images):
     rotate_images = rotate_images.transpose(0, 3, 1, 2)
     return rotate_images
 
+
 def downsampling(images, levels):
-    div = 2**(levels)
-    images_t = np.empty((0, int(images.shape[1])/div, int(images.shape[2])/div), np.float32)
+    div = 2 ** (levels)
+    images_t = np.empty((0, int(images.shape[1]) / div, int(images.shape[2]) / div), np.float32)
     for image in images:
         tmp = image
         for level in range(levels):
@@ -130,6 +135,7 @@ def downsampling(images, levels):
         image_t = tmp
         images_t = np.append(images_t, [image_t], axis=0)
     return images_t
+
 
 def gram_matrix(activations):
     '''
@@ -139,10 +145,11 @@ def gram_matrix(activations):
     :return: normalised gram matrix
     '''
     N = activations.shape[1]
-    F = activations.reshape(N,-1)
+    F = activations.reshape(N, -1)
     M = F.shape[1]
-    G = np.dot(F,F.T) / M
+    G = np.dot(F, F.T) / M
     return G, F
+
 
 def global_contrast_normalize(X, scale=1., subtract_mean=True, use_std=True, sqrt_bias=10., min_divisor=1e-8):
     """
