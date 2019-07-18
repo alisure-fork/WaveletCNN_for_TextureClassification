@@ -1,9 +1,10 @@
-import numpy as np
-import wavelet_haar
-from alisuretool.Tools import Tools
-import cv2
 import os
 
+import cv2
+import numpy as np
+from alisuretool.Tools import Tools
+
+from wavelet_demo import wavelet_haar
 
 level = 4
 name = "demo.png"
