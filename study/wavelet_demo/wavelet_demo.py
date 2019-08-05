@@ -3,8 +3,8 @@ import os
 import cv2
 import numpy as np
 from alisuretool.Tools import Tools
+from wavelet_haar import wavelet_transform
 
-from wavelet_demo import wavelet_haar
 
 level = 4
 name = "demo.png"
@@ -18,7 +18,7 @@ print(image_data.shape)
 # 获得小波数据
 wavelets = []
 for i in range(image_data.shape[-1]):
-    wavelet = wavelet_haar.wavelet_transform(image_data[:, :, i], level)
+    wavelet = wavelet_transform(image_data[:, :, i], level)
     wavelets.append(wavelet)
 
 
