@@ -1,7 +1,8 @@
-'''VGG11/13/16/19 in Pytorch.'''
 import torch
 import torch.nn as nn
 
+
+################################################################################################################
 
 cfg = {
     'VGG11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
@@ -11,6 +12,7 @@ cfg = {
 }
 
 
+# 方案0：VGG
 class VGG(nn.Module):
     def __init__(self, vgg_name="VGG16"):
         super(VGG, self).__init__()
@@ -39,6 +41,9 @@ class VGG(nn.Module):
         return nn.Sequential(*layers)
 
     pass
+
+
+################################################################################################################
 
 
 class Conv2dBNReLU(nn.Module):
@@ -86,18 +91,14 @@ class WaveletConv2d(nn.Module):
     pass
 
 
+# 方案一：将输入进行小波分解，分别在适当的位置cat到模型中
 class WaveletVGG(nn.Module):
 
     def __init__(self, level=0):
         super(WaveletVGG, self).__init__()
 
         self.level = level
-        # self.kernel = [128, 256, 512, 1024, 1024]
         self.kernel = [64, 128, 256, 512, 512]
-        # self.kernel = [32, 64, 128, 256, 256]
-        # self.kernel = [16, 32, 64, 128, 128]
-        # self.kernel = [8, 16, 32, 64, 64]
-        # self.kernel = [2, 4, 8, 16, 16]
 
         # VGG16
         self.conv1_1 = Conv2dBNReLU(3, self.kernel[0])
@@ -171,6 +172,9 @@ class WaveletVGG(nn.Module):
         return out
 
     pass
+
+
+################################################################################################################
 
 
 class VGGBlock(nn.Module):
@@ -297,6 +301,7 @@ class WaveletVGGBlock(nn.Module):
     pass
 
 
+# 方案二：用小波分解替换pooling，4个分量都使用
 class WaveletVGG2(nn.Module):
 
     def __init__(self, level=0, wavelet_fn=None):
@@ -337,3 +342,142 @@ class WaveletVGG2(nn.Module):
         return out
 
     pass
+
+
+################################################################################################################
+
+
+class VGGWaveletBlock2(nn.Module):
+
+    def __init__(self, in_channels, out_channels, wavelet_fn, conv_more=False, kernel_size=3, padding=1):
+        super(VGGWaveletBlock2, self).__init__()
+        self.wavelet_fn = wavelet_fn
+        self.conv_more = conv_more
+        self.conv1 = Conv2dBNReLU(in_channels, out_channels, kernel_size, padding)
+        self.conv2 = Conv2dBNReLU(out_channels, out_channels, kernel_size, padding)
+        if self.conv_more:
+            self.conv3 = Conv2dBNReLU(out_channels, out_channels, kernel_size, padding)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        pass
+
+    def forward(self, inputs):
+        out = self.conv1(inputs)
+        out = self.conv2(out)
+        if self.conv_more:
+            out = self.conv3(out)
+
+        # out_pool = self.pool(out)
+        # out = {"LL_1": out_pool, "LH_1": out_pool, "HL_1": out_pool, "HH_1": out_pool}
+
+        out = self.wavelet_fn(out, detach=True)
+
+        ll, lh, hl, hh = out["LL_1"], out["LH_1"], out["HL_1"], out["HH_1"]
+        return ll, lh, hl, hh
+
+    def __call__(self, *args, **kwargs):
+        return super(VGGWaveletBlock2, self).__call__(*args, **kwargs)
+
+    pass
+
+
+class WaveletBlock2(nn.Module):
+
+    def __init__(self, in_channels, out_channels, wavelet_fn, conv_more=False, kernel_size=3, padding=1):
+        super(WaveletBlock2, self).__init__()
+        self.wavelet_fn = wavelet_fn
+        self.conv_more = conv_more
+        self.conv1_ll = Conv2dBNReLU(in_channels, out_channels, kernel_size, padding)
+        self.conv2 = Conv2dBNReLU(out_channels, out_channels, kernel_size, padding)
+        if self.conv_more:
+            self.conv3 = Conv2dBNReLU(out_channels, out_channels, kernel_size, padding)
+        pass
+
+    def forward(self, inputs):
+        ll, lh, hl, hh = inputs
+        out = self.conv1_ll(ll)
+        out = self.conv2(out)
+        if self.conv_more:
+            out = self.conv3(out)
+
+        out = self.wavelet_fn(out, detach=True)
+        ll, lh, hl, hh = out["LL_1"], out["LH_1"], out["HL_1"], out["HH_1"]
+        return ll, lh, hl, hh
+
+    def __call__(self, *args, **kwargs):
+        return super(WaveletBlock2, self).__call__(*args, **kwargs)
+
+    pass
+
+
+class WaveletVGGBlock2(nn.Module):
+
+    def __init__(self, in_channels, out_channels, wavelet_fn, conv_more=False, kernel_size=3, padding=1):
+        super(WaveletVGGBlock2, self).__init__()
+        self.wavelet_fn = wavelet_fn
+        self.conv_more = conv_more
+        self.conv1_ll = Conv2dBNReLU(in_channels, out_channels, kernel_size, padding)
+        self.conv2 = Conv2dBNReLU(out_channels, out_channels, kernel_size, padding)
+        if self.conv_more:
+            self.conv3 = Conv2dBNReLU(out_channels, out_channels, kernel_size, padding)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        pass
+
+    def forward(self, inputs):
+        ll, lh, hl, hh = inputs
+        out = self.conv1_ll(ll)
+        out = self.conv2(out)
+        if self.conv_more:
+            out = self.conv3(out)
+        out = self.pool(out)
+        return out
+
+    def __call__(self, *args, **kwargs):
+        return super(WaveletVGGBlock2, self).__call__(*args, **kwargs)
+
+    pass
+
+
+# 方案三：用小波分解替换pooling，使用LL分量
+class WaveletVGG3(nn.Module):
+
+    def __init__(self, level=0, wavelet_fn=None):
+        super(WaveletVGG3, self).__init__()
+
+        self.level = level
+        self.wavelet_fn = wavelet_fn
+        self.kernel = [64, 128, 256, 512, 512]
+
+        config = [[0, 0, 0, 0, 0],  # VGG16
+                  [1, 3, 0, 0, 0],  # Level 1
+                  [1, 2, 3, 0, 0],  # Level 2
+                  [1, 2, 2, 3, 0],  # Level 3
+                  [1, 2, 2, 2, 3]]  # Level 4
+        block = [VGGBlock, VGGWaveletBlock2, WaveletBlock2, WaveletVGGBlock2]
+
+        self.block1 = block[config[self.level][0]](3, self.kernel[0], self.wavelet_fn, conv_more=False)
+        self.block2 = block[config[self.level][1]](self.kernel[0], self.kernel[1], self.wavelet_fn, conv_more=False)
+        self.block3 = block[config[self.level][2]](self.kernel[1], self.kernel[2], self.wavelet_fn, conv_more=True)
+        self.block4 = block[config[self.level][3]](self.kernel[2], self.kernel[3], self.wavelet_fn, conv_more=True)
+        self.block5 = block[config[self.level][4]](self.kernel[3], self.kernel[4], self.wavelet_fn, conv_more=True)
+
+        # 分类
+        self.pool_avg = nn.AvgPool2d(kernel_size=1, stride=1)
+        self.classifier = nn.Linear(self.kernel[-1], 10)
+        pass
+
+    def forward(self, x):
+        out = self.block1(x)
+        out = self.block2(out)
+        out = self.block3(out)
+        out = self.block4(out)
+        out = self.block5(out)
+
+        out = self.pool_avg(out)  # 512x1x1
+        out = out.view(out.size(0), -1)  # 512
+        out = self.classifier(out)  # 10
+        return out
+
+    pass
+
+
+################################################################################################################

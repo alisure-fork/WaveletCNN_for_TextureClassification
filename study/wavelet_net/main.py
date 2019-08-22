@@ -11,6 +11,7 @@ from wavelet_haar import wavelet_transform
 import torchvision.transforms as transforms
 
 
+# 方案一：将输入进行小波分解，分别在适当的位置cat到模型中
 class Runner(object):
     def __init__(self, root_path='/home/ubuntu/data1.5TB/cifar',
                  model=WaveletVGG, wavelet_level=0, batch_size=128, lr=0.1, name="vgg"):
@@ -205,6 +206,8 @@ class Runner(object):
     pass
 
 
+# 方案二：用小波分解替换pooling，4个分量都使用
+# 方案三：用小波分解替换pooling，使用LL分量
 class Runner2(object):
     def __init__(self, root_path='/home/ubuntu/data1.5TB/cifar',
                  model=WaveletVGG2, wavelet_level=0, batch_size=128, lr=0.1, name="vgg"):
@@ -402,7 +405,7 @@ if __name__ == '__main__':
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # 1
 
-    runner = Runner2(model=WaveletVGG2, wavelet_level=3, batch_size=128, lr=0.01, name="WaveletVGG2_64")
+    runner = Runner2(model=WaveletVGG3, wavelet_level=1, batch_size=128, lr=0.01, name="WaveletVGG3_64")
     runner.info()
     runner.resume(is_resume=False)
 
